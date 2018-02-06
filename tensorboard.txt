@@ -1,0 +1,4 @@
+writer = tf.summary.FileWriter('./graphs', sess.graph)
+writer.close()
+
+tensorboard --logdir="./graphs"
