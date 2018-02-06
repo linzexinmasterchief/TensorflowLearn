@@ -111,5 +111,5 @@ def appli():
     print('NN predicted', y_pred[0])
 
 
-train_neural_network()
+# train_neural_network()
 appli()
