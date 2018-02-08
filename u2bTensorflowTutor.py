@@ -46,70 +46,86 @@ def neural_network_model(data):
     return output
 
 def train_neural_network():
+    # define default graph
+    # set the size of one batch to 100
     batch_size = 100
-
+    # input images
     x = tf.placeholder('float', [None, 784])
+    # labels of the images
     y = tf.placeholder('float')
 
     prediction = neural_network_model(x)
-    # prediction =
     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=prediction))
-
     optimizer = tf.train.AdamOptimizer().minimize(cost)
-    tf.add_to_collection('prediction', prediction)
-    tf.add_to_collection('x', x)
 
+    # the amount of time training the network
     hm_epochs = 10
 
     with tf.Session() as sess:
-        writer = tf.summary.FileWriter('./graphs', sess.graph)
-        sess.run(tf.initialize_all_variables())
+        with tf.device("/cpu:0"):
+            # create writer for tensorboard
+            writer = tf.summary.FileWriter('./graphs', sess.graph)
+            sess.run(tf.initialize_all_variables())
 
-        for epoch in range(hm_epochs):
-            epoch_loss = 0
+            for epoch in range(hm_epochs):
+                epoch_loss = 0
 
-            for _ in range(int(mnist.train.num_examples/batch_size)):
-                epoch_x, epoch_y = mnist.train.next_batch(batch_size)
-                _, c = sess.run([optimizer, cost], feed_dict={x: epoch_x, y: epoch_y})
-                epoch_loss += c
-            print('Epoch ', epoch, ' completed out of ', hm_epochs, " | lost: ", epoch_loss)
+                for _ in range(int(mnist.train.num_examples/batch_size)):
+                    # extract batch_size amount of data (image) and label from the data size
+                    epoch_x, epoch_y = mnist.train.next_batch(batch_size)
 
-        correct = tf.equal(tf.argmax(prediction, 1), tf.argmax(y, 1))
+                    # runs the default graph above, x and y are the pre-defined placeholders
+                    _, c = sess.run([optimizer, cost], feed_dict={x: epoch_x, y: epoch_y})
+                    epoch_loss += c
+                print('Epoch ', epoch, ' completed out of ', hm_epochs, " | lost: ", epoch_loss)
 
-        accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
-        print('Accuracy', accuracy.eval({x:mnist.test.images, y:mnist.test.labels}))
+            correct = tf.equal(tf.argmax(prediction, 1), tf.argmax(y, 1))
 
-        saver = tf.train.Saver()
-        saver.save(sess, 'model/model.ckpt')
+            accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
+            print('Accuracy', accuracy.eval({x:mnist.test.images, y:mnist.test.labels}))
+
+            saver = tf.train.Saver()
+            saver.save(sess, 'model/model.ckpt')
 
     writer.close()
 
-def appli():
+def apply():
+    # creates a new session
     sess = tf.Session()
-    # sess.run(tf.initialize_all_variables())
+    # locate the saved session
     new_saver = tf.train.import_meta_graph('model/model.ckpt.meta')
+    # restore the saved session (the session contains all the data we need to restore the trained model
     new_saver.restore(sess, tf.train.latest_checkpoint('model/'))
-    prediction = tf.get_collection('prediction')[0]
-    x = tf.get_collection('x')[0]
 
-    from matplotlib import pyplot as plt
+    # creates another default graph for predicting
+    # creates a input placeholder (since we no longer has the label y)
+    x = tf.placeholder('float', [None, 784])
+    # use the neural network model structure
+    prediction = neural_network_model(x)
+    # initialize x
+    sess.run(tf.initialize_all_variables())
 
+    # code to use your own picture as input x
     from PIL import Image
     import numpy as np
     img = np.array(Image.open('test4.bmp'))
 
+    ## code to use random pictures from mnist as input x
     # from random import randint
     # num = randint(0, mnist.test.images.shape[0])
     # img = mnist.test.images[num]
 
+    # code to display the picture
+    from matplotlib import pyplot as plt
     img = img.reshape(1, 784)
-    feed_dict = {x: img}
-    y_pred = sess.run(tf.argmax(prediction, 1), feed_dict=feed_dict)
-
     plt.imshow(img.reshape(28, 28), cmap=plt.cm.binary)
     plt.show()
+
+    # finally feed the image and get the prediction
+    feed_dict = {x: img}
+    y_pred = sess.run(tf.argmax(prediction, 1), feed_dict=feed_dict)
     print('NN predicted', y_pred[0])
 
 
-# train_neural_network()
-appli()
+train_neural_network()
+apply()
