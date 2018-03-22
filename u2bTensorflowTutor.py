@@ -6,6 +6,8 @@ mnist = input_data.read_data_sets("./MNIST_data/", one_hot=True)
 n_nodes_hl1 = 500
 n_nodes_hl2 = 500
 n_nodes_hl3 = 500
+n_nodes_hl4 = 500
+n_nodes_hl5 = 500
 
 n_classes = 10
 
@@ -26,8 +28,18 @@ def neural_network_model(data):
         'biases':tf.Variable(tf.random_normal([n_nodes_hl3]))
     }
 
+    hidden_4_layer = {
+        'weights':tf.Variable(tf.random_normal([n_nodes_hl3, n_nodes_hl4])),
+        'biases':tf.Variable(tf.random_normal([n_nodes_hl4]))
+    }
+
+    hidden_5_layer = {
+        'weights':tf.Variable(tf.random_normal([n_nodes_hl4, n_nodes_hl5])),
+        'biases':tf.Variable(tf.random_normal([n_nodes_hl5]))
+    }
+
     output_layer = {
-        'weights':tf.Variable(tf.random_normal([n_nodes_hl3, n_classes])),
+        'weights':tf.Variable(tf.random_normal([n_nodes_hl5, n_classes])),
         'biases':tf.Variable(tf.random_normal([n_classes]))
     }
 
@@ -42,7 +54,13 @@ def neural_network_model(data):
     l3 = tf.add(tf.matmul(l2, hidden_3_layer['weights']), hidden_3_layer['biases'])
     l3 = tf.nn.relu(l3)
 
-    output = tf.add(tf.matmul(l3, output_layer['weights']), output_layer['biases'])
+    l4 = tf.add(tf.matmul(l3, hidden_4_layer['weights']), hidden_4_layer['biases'])
+    l4 = tf.nn.relu(l4)
+
+    l5 = tf.add(tf.matmul(l4, hidden_5_layer['weights']), hidden_5_layer['biases'])
+    l5 = tf.nn.relu(l5)
+
+    output = tf.add(tf.matmul(l5, output_layer['weights']), output_layer['biases'])
     return output
 
 def train_neural_network():
@@ -59,33 +77,33 @@ def train_neural_network():
     optimizer = tf.train.AdamOptimizer().minimize(cost)
 
     # the amount of time training the network
-    hm_epochs = 10
+    hm_epochs = 20
 
     with tf.Session() as sess:
-        with tf.device("/cpu:0"):
-            # create writer for tensorboard
-            writer = tf.summary.FileWriter('./graphs', sess.graph)
-            sess.run(tf.initialize_all_variables())
+        # with tf.device("/gpu:0"):
+        # create writer for tensorboard
+        writer = tf.summary.FileWriter('./graphs', sess.graph)
+        sess.run(tf.initialize_all_variables())
 
-            for epoch in range(hm_epochs):
-                epoch_loss = 0
+        for epoch in range(hm_epochs):
+            epoch_loss = 0
 
-                for _ in range(int(mnist.train.num_examples/batch_size)):
-                    # extract batch_size amount of data (image) and label from the data size
-                    epoch_x, epoch_y = mnist.train.next_batch(batch_size)
+            for _ in range(int(mnist.train.num_examples/batch_size)):
+                # extract batch_size amount of data (image) and label from the data size
+                epoch_x, epoch_y = mnist.train.next_batch(batch_size)
 
-                    # runs the default graph above, x and y are the pre-defined placeholders
-                    _, c = sess.run([optimizer, cost], feed_dict={x: epoch_x, y: epoch_y})
-                    epoch_loss += c
-                print('Epoch ', epoch, ' completed out of ', hm_epochs, " | lost: ", epoch_loss)
+                # runs the default graph above, x and y are the pre-defined placeholders
+                _, c = sess.run([optimizer, cost], feed_dict={x: epoch_x, y: epoch_y})
+                epoch_loss += c
+            print('Epoch ', epoch, ' completed out of ', hm_epochs, " | lost: ", epoch_loss)
 
-            correct = tf.equal(tf.argmax(prediction, 1), tf.argmax(y, 1))
+        correct = tf.equal(tf.argmax(prediction, 1), tf.argmax(y, 1))
 
-            accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
-            print('Accuracy', accuracy.eval({x:mnist.test.images, y:mnist.test.labels}))
+        accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
+        print('Accuracy', accuracy.eval({x:mnist.test.images, y:mnist.test.labels}))
 
-            saver = tf.train.Saver()
-            saver.save(sess, 'model/model.ckpt')
+        saver = tf.train.Saver()
+        saver.save(sess, 'model/model.ckpt')
 
     writer.close()
 
@@ -106,14 +124,14 @@ def apply():
     sess.run(tf.initialize_all_variables())
 
     # code to use your own picture as input x
-    from PIL import Image
-    import numpy as np
-    img = np.array(Image.open('test4.bmp'))
+    # from PIL import Image
+    # import numpy as np
+    # img = np.array(Image.open('test3.bmp'))
 
     ## code to use random pictures from mnist as input x
-    # from random import randint
-    # num = randint(0, mnist.test.images.shape[0])
-    # img = mnist.test.images[num]
+    from random import randint
+    num = randint(0, mnist.test.images.shape[0])
+    img = mnist.test.images[num]
 
     # code to display the picture
     from matplotlib import pyplot as plt
